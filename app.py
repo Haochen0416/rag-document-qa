@@ -14,14 +14,11 @@ import streamlit as st
 from rag_pipeline import load_and_split, build_vectorstore, build_qa_chain, query
 
 
-# ── Page config ───────────────────────────────────────────────────────────────
-
 st.set_page_config(
     page_title="RAG Document Q&A",
     page_icon="📄",
     layout="wide",
 )
-
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 
@@ -58,24 +55,18 @@ with st.sidebar:
         "[Source](https://github.com/Haochen0416/rag-document-qa)"
     )
 
-
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 st.title("📄 RAG Document Q&A")
 st.caption("Upload a PDF and ask questions — answers are grounded in your document.")
 
-# ── Upload ────────────────────────────────────────────────────────────────────
-
 uploaded_file = st.file_uploader("Upload a PDF", type=["pdf"])
 
 if uploaded_file and api_key:
-    # Cache the processed index per (file name + size) so we don't re-embed on
-    # every Streamlit re-run.
     cache_key = f"{uploaded_file.name}_{uploaded_file.size}"
 
     if st.session_state.get("cache_key") != cache_key:
         with st.spinner("📚 Processing document — this may take a few seconds…"):
-            # Write to a temp file because PyPDFLoader needs a path
             with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
                 tmp.write(uploaded_file.read())
                 tmp_path = tmp.name
@@ -83,9 +74,9 @@ if uploaded_file and api_key:
             try:
                 chunks = load_and_split(tmp_path)
                 vectorstore = build_vectorstore(chunks, api_key)
-                chain = build_qa_chain(vectorstore, api_key, model)
+                chain_and_retriever = build_qa_chain(vectorstore, api_key, model)
 
-                st.session_state["chain"] = chain
+                st.session_state["chain"] = chain_and_retriever
                 st.session_state["cache_key"] = cache_key
                 st.session_state["doc_name"] = uploaded_file.name
                 st.session_state["num_chunks"] = len(chunks)
@@ -109,13 +100,11 @@ elif not uploaded_file:
     st.info("👆 Upload a PDF to get started.")
     st.stop()
 
-
 # ── Chat interface ────────────────────────────────────────────────────────────
 
 if "chat_history" not in st.session_state:
     st.session_state["chat_history"] = []
 
-# Render previous turns
 for turn in st.session_state["chat_history"]:
     with st.chat_message("user"):
         st.write(turn["question"])
@@ -128,7 +117,6 @@ for turn in st.session_state["chat_history"]:
                     st.markdown(f"**Chunk {i} — page {page + 1}**")
                     st.caption(doc.page_content[:500] + ("…" if len(doc.page_content) > 500 else ""))
 
-# Input box
 question = st.chat_input("Ask a question about your document…")
 
 if question:
@@ -156,7 +144,6 @@ if question:
                     st.markdown(f"**Chunk {i} — page {page + 1}**")
                     st.caption(doc.page_content[:500] + ("…" if len(doc.page_content) > 500 else ""))
 
-    # Persist to history
     st.session_state["chat_history"].append(
         {"question": question, "answer": answer, "sources": sources}
     )
