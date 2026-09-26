@@ -29,7 +29,7 @@ An AI-powered document question-answering system built with **Retrieval-Augmente
 ┌──────────────┐    ┌──────────────────────────────────────┐
 │  PDF Upload  │───▶│ PyPDFLoader → RecursiveTextSplitter  │
 └──────────────┘    └──────────────────┬───────────────────┘
-                                       │ chunks
+                                       │ overlapping chunks
                     ┌──────────────────▼───────────────────┐
                     │ OpenAI text-embedding-3-small        │
                     │ → FAISS in-memory vector store       │
